@@ -2,10 +2,10 @@ package main
 
 import (
 	"os"
+	"os/signal"
 	"context"
 	"time"
 	"strconv"
-	"signal"
 	
 	qmq "github.com/rqure/qmq/src"
 	"google.golang.org/protobuf/types/known/timestamppb"

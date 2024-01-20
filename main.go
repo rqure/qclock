@@ -22,14 +22,14 @@ func main() {
 		tickRateMs = 100
 	}
 	
-	ticker := time.NewTicker(tickRateMs * time.Milliseconds)
+	ticker := time.NewTicker(tickRateMs * time.Millisecond)
 	for {
 		select {
-		case <-ctx.Done:
+		case <-ctx.Done():
 			break
-		case t <-ticker.C:
+		case t := <-ticker.C:
 			timestamp := qmq.QMQTimestamp{Value: t}
-			app.Producer(ctx, "clock:exchange").Push(ctx, &timestamp)
+			app.Producer("clock:exchange").Push(ctx, &timestamp)
 		}
 	}
 }

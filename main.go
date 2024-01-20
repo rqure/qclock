@@ -14,7 +14,7 @@ import (
 func main() {
 	ctx := context.Background()
 	
-	app := qmq.NewQMQApplication(ctx, "example")
+	app := qmq.NewQMQApplication(ctx, "clock")
 	app.Initialize(ctx)
 	defer app.Deinitialize(ctx)
 

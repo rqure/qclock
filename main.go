@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 	"strconv"
+	"signal"
 	
 	qmq "github.com/rqure/qmq/src"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -24,10 +25,15 @@ func main() {
 		tickRateMs = 100
 	}
 	
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt)	
+	
 	ticker := time.NewTicker(time.Duration(tickRateMs) * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
+			break
+		case <-sigint:
 			break
 		case <-ticker.C:
 			timestamp := qmq.QMQTimestamp{Value: timestamppb.Now()}

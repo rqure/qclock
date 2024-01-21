@@ -26,4 +26,4 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: rqure/clock:${{ github.ref }}
+          tags: rqure/clock:${{ github.ref_name }}

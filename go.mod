@@ -2,7 +2,7 @@ module github.com/rqure/qclock
 
 go 1.21.6
 
-require github.com/rqure/qmq v0.0.0-20240120012113-c93d9a2eb835
+require github.com/rqure/qmq v1.0.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect

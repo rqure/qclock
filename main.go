@@ -29,6 +29,7 @@ func main() {
 	for {
 		select {
 		case <-sigint:
+			app.Logger().Advise("SIGINT received")
 			return
 		case <-ticker.C:
 			timestamp := qmq.QMQTimestamp{Value: timestamppb.Now()}

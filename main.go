@@ -33,6 +33,7 @@ func main() {
 			return
 		case <-ticker.C:
 			timestamp := qmq.QMQTimestamp{Value: timestamppb.Now()}
+			app.Logger().Advise("Tick")
 			app.Producer("clock:exchange").Push(&timestamp)
 		}
 	}

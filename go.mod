@@ -3,7 +3,7 @@ module github.com/rqure/qclock
 go 1.21.6
 
 require (
-	github.com/rqure/qmq v1.0.11
+	github.com/rqure/qmq v1.0.15
 	google.golang.org/protobuf v1.32.0
 )
 

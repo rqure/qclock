@@ -1,39 +1,83 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
+	"syscall"
 	"time"
 
 	qmq "github.com/rqure/qmq/src"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func main() {
-	app := qmq.NewQMQApplication("clock")
-	app.Initialize()
-	defer app.Deinitialize()
+type NameProvider struct{}
 
-	app.AddProducer("clock:exchange").Initialize(10)
+func (np *NameProvider) Get() string {
+	return "clock"
+}
 
-	tickRateMs, err := strconv.Atoi(os.Getenv("TICK_RATE_MS"))
-	if err != nil {
-		tickRateMs = 100
+type TimestampToAnyTransformer struct {
+	logger qmq.Logger
+}
+
+func NewTimestampToAnyTransformer(logger qmq.Logger) qmq.Transformer {
+	return &TimestampToAnyTransformer{
+		logger: logger,
+	}
+}
+
+func (t *TimestampToAnyTransformer) Transform(i interface{}) interface{} {
+	d, ok := i.(*qmq.Timestamp)
+	if !ok {
+		t.logger.Error(fmt.Sprintf("TimestampToAnyTransformer: invalid input %T", i))
+		return nil
 	}
 
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, os.Interrupt)
+	a, err := anypb.New(d)
+	if err != nil {
+		t.logger.Error(fmt.Sprintf("TimestampToAnyTransformer: failed to marshal timestamp into anypb: %v", err))
+		return nil
+	}
 
-	ticker := time.NewTicker(time.Duration(tickRateMs) * time.Millisecond)
+	return a
+}
+
+type TransformerProviderFactory struct{}
+
+func (t *TransformerProviderFactory) Create(components qmq.EngineComponentProvider) qmq.TransformerProvider {
+	transformerProvider := qmq.NewDefaultTransformerProvider()
+	transformerProvider.Set("producer:clock:exchange", []qmq.Transformer{
+		NewTimestampToAnyTransformer(components.WithLogger()),
+		qmq.NewAnyToMessageTransformer(components.WithLogger()),
+	})
+	return transformerProvider
+}
+
+type ClockEngineProcessor struct{}
+
+func (c *ClockEngineProcessor) Process(e qmq.EngineComponentProvider) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+
 	for {
 		select {
-		case <-sigint:
-			app.Logger().Advise("SIGINT received")
+		case <-quit:
 			return
 		case <-ticker.C:
-			timestamp := qmq.QMQTimestamp{Value: timestamppb.Now()}
-			app.Producer("clock:exchange").Push(&timestamp)
+			timestamp := &qmq.Timestamp{Value: timestamppb.Now()}
+			e.WithProducer("clock:exchange").Push(timestamp)
 		}
 	}
+}
+
+func main() {
+	engine := qmq.NewDefaultEngine(qmq.DefaultEngineConfig{
+		NameProvider:               &NameProvider{},
+		TransformerProviderFactory: &TransformerProviderFactory{},
+	})
+	engine.Run()
 }

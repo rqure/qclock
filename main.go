@@ -78,6 +78,7 @@ func main() {
 	engine := qmq.NewDefaultEngine(qmq.DefaultEngineConfig{
 		NameProvider:               &NameProvider{},
 		TransformerProviderFactory: &TransformerProviderFactory{},
+		EngineProcessor:            &ClockEngineProcessor{},
 	})
 	engine.Run()
 }

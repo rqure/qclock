@@ -50,7 +50,7 @@ func (t *TransformerProviderFactory) Create(components qmq.EngineComponentProvid
 	transformerProvider := qmq.NewDefaultTransformerProvider()
 	transformerProvider.Set("producer:clock:exchange", []qmq.Transformer{
 		NewTimestampToAnyTransformer(components.WithLogger()),
-		qmq.NewAnyToMessageTransformer(components.WithLogger()),
+		qmq.NewAnyToMessageTransformer(components.WithLogger(), qmq.AnyToMessageTransformerConfig{}),
 	})
 	return transformerProvider
 }

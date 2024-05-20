@@ -48,7 +48,7 @@ type TransformerProviderFactory struct{}
 
 func (t *TransformerProviderFactory) Create(components qmq.EngineComponentProvider) qmq.TransformerProvider {
 	transformerProvider := qmq.NewDefaultTransformerProvider()
-	transformerProvider.Set("producer:clock:timestamp", []qmq.Transformer{
+	transformerProvider.Set("producer:clock:event:new-timestamp", []qmq.Transformer{
 		NewTimestampToAnyTransformer(components.WithLogger()),
 		qmq.NewAnyToMessageTransformer(components.WithLogger(), qmq.AnyToMessageTransformerConfig{
 			SourceProvider: &NameProvider{},
@@ -72,7 +72,7 @@ func (c *ClockEngineProcessor) Process(e qmq.EngineComponentProvider) {
 			return
 		case <-ticker.C:
 			timestamp := &qmq.Timestamp{Value: timestamppb.Now()}
-			e.WithProducer("clock:timestamp").Push(timestamp)
+			e.WithProducer("clock:event:new-timestamp").Push(timestamp)
 		}
 	}
 }

@@ -24,6 +24,15 @@ func main() {
 	dbWorker := qdb.NewDatabaseWorker(db)
 	leaderElectionWorker := qdb.NewLeaderElectionWorker(db)
 	clockWorker := NewClockWorker(db, 1*time.Second)
+	schemaValidator := qdb.NewSchemaValidator(db)
+
+	schemaValidator.AddEntity("Root", "SchemaUpdateTrigger")
+	schemaValidator.AddEntity("SystemClock", "CurrentTime")
+
+	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.OnSchemaUpdated))
+	leaderElectionWorker.AddAvailabilityCriteria(func() bool {
+		return schemaValidator.IsValid()
+	})
 
 	dbWorker.Signals.Connected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseConnected))
 	dbWorker.Signals.Disconnected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseDisconnected))

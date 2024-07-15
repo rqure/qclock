@@ -38,8 +38,7 @@ func main() {
 	dbWorker.Signals.Disconnected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseDisconnected))
 
 	leaderElectionWorker.Signals.BecameLeader.Connect(qdb.Slot(clockWorker.OnBecameLeader))
-	leaderElectionWorker.Signals.BecameFollower.Connect(qdb.Slot(clockWorker.OnLostLeadership))
-	leaderElectionWorker.Signals.BecameUnavailable.Connect(qdb.Slot(clockWorker.OnLostLeadership))
+	leaderElectionWorker.Signals.LosingLeadership.Connect(qdb.Slot(clockWorker.OnLostLeadership))
 
 	// Create a new application configuration
 	config := qdb.ApplicationConfig{

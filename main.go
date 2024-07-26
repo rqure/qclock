@@ -29,7 +29,8 @@ func main() {
 	schemaValidator.AddEntity("Root", "SchemaUpdateTrigger")
 	schemaValidator.AddEntity("SystemClock", "CurrentTime")
 
-	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.OnSchemaUpdated))
+	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.ValidationRequired))
+	dbWorker.Signals.Connected.Connect(qdb.Slot(schemaValidator.ValidationRequired))
 	leaderElectionWorker.AddAvailabilityCriteria(func() bool {
 		return schemaValidator.IsValid()
 	})

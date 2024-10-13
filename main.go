@@ -25,8 +25,6 @@ func main() {
 	leaderElectionWorker := qdb.NewLeaderElectionWorker(db)
 	clockWorker := NewClockWorker(db, 1*time.Second)
 	schemaValidator := qdb.NewSchemaValidator(db)
-
-	schemaValidator.AddEntity("Root", "SchemaUpdateTrigger")
 	schemaValidator.AddEntity("SystemClock", "CurrentTime")
 
 	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.ValidationRequired))

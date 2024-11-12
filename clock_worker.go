@@ -11,14 +11,14 @@ type ClockWorker struct {
 	db       qdb.IDatabase
 	isLeader bool
 
-	lastUpdateTime  time.Time
-	updateFrequency time.Duration
+	ticker *time.Ticker
 }
 
 func NewClockWorker(db qdb.IDatabase, updateFrequency time.Duration) *ClockWorker {
 	return &ClockWorker{
-		db:              db,
-		updateFrequency: updateFrequency,
+		db:       db,
+		isLeader: false,
+		ticker:   time.NewTicker(updateFrequency),
 	}
 }
 
@@ -31,11 +31,10 @@ func (w *ClockWorker) OnLostLeadership() {
 }
 
 func (w *ClockWorker) Init() {
-
 }
 
 func (w *ClockWorker) Deinit() {
-
+	w.ticker.Stop()
 }
 
 func (w *ClockWorker) DoWork() {
@@ -43,16 +42,16 @@ func (w *ClockWorker) DoWork() {
 		return
 	}
 
-	if time.Since(w.lastUpdateTime) < w.updateFrequency {
-		return
-	}
+	select {
+	case <-w.ticker.C:
+		clocks := qdb.NewEntityFinder(w.db).Find(qdb.SearchCriteria{
+			EntityType: "SystemClock",
+		})
 
-	w.lastUpdateTime = time.Now()
-	clocks := qdb.NewEntityFinder(w.db).Find(qdb.SearchCriteria{
-		EntityType: "SystemClock",
-	})
+		for _, clock := range clocks {
+			clock.GetField("CurrentTimeFn").PushValue(&qdb.Timestamp{Raw: timestamppb.Now()})
+		}
+	default:
 
-	for _, clock := range clocks {
-		clock.GetField("CurrentTimeFn").PushValue(&qdb.Timestamp{Raw: timestamppb.Now()})
 	}
 }

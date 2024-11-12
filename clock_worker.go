@@ -53,6 +53,6 @@ func (w *ClockWorker) DoWork() {
 	})
 
 	for _, clock := range clocks {
-		clock.GetField("CurrentTime").PushValue(&qdb.Timestamp{Raw: timestamppb.Now()})
+		clock.GetField("CurrentTimeFn").PushValue(&qdb.Timestamp{Raw: timestamppb.Now()})
 	}
 }

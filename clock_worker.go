@@ -3,20 +3,21 @@ package main
 import (
 	"time"
 
-	qdb "github.com/rqure/qdb/src"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/rqure/qlib/pkg/app"
+	"github.com/rqure/qlib/pkg/data"
+	"github.com/rqure/qlib/pkg/data/query"
 )
 
 type ClockWorker struct {
-	db       qdb.IDatabase
+	store    data.Store
 	isLeader bool
 
 	ticker *time.Ticker
 }
 
-func NewClockWorker(db qdb.IDatabase, updateFrequency time.Duration) *ClockWorker {
+func NewClockWorker(store data.Store, updateFrequency time.Duration) *ClockWorker {
 	return &ClockWorker{
-		db:       db,
+		store:    store,
 		isLeader: false,
 		ticker:   time.NewTicker(updateFrequency),
 	}
@@ -30,7 +31,7 @@ func (w *ClockWorker) OnLostLeadership() {
 	w.isLeader = false
 }
 
-func (w *ClockWorker) Init() {
+func (w *ClockWorker) Init(h app.Handle) {
 }
 
 func (w *ClockWorker) Deinit() {
@@ -44,12 +45,12 @@ func (w *ClockWorker) DoWork() {
 
 	select {
 	case <-w.ticker.C:
-		clocks := qdb.NewEntityFinder(w.db).Find(qdb.SearchCriteria{
-			EntityType: "SystemClock",
-		})
+		clocks := query.New(w.store).
+			ForType("SystemClock").
+			Execute()
 
 		for _, clock := range clocks {
-			clock.GetField("CurrentTimeFn").PushValue(&qdb.Timestamp{Raw: timestamppb.Now()})
+			clock.GetField("CurrentTimeFn").WriteTimestamp(time.Now())
 		}
 	default:
 

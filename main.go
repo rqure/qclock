@@ -4,54 +4,41 @@ import (
 	"os"
 	"time"
 
-	qdb "github.com/rqure/qdb/src"
+	"github.com/rqure/qlib/pkg/app"
+	"github.com/rqure/qlib/pkg/app/workers"
+	"github.com/rqure/qlib/pkg/data/store"
 )
 
 func getDatabaseAddress() string {
-	addr := os.Getenv("QDB_ADDR")
+	addr := os.Getenv("Q_ADDR")
 	if addr == "" {
-		addr = "redis:6379"
+		addr = "webgateway:20000"
 	}
 
 	return addr
 }
 
 func main() {
-	db := qdb.NewRedisDatabase(qdb.RedisDatabaseConfig{
+	s := store.NewWeb(store.WebConfig{
 		Address: getDatabaseAddress(),
 	})
 
-	dbWorker := qdb.NewDatabaseWorker(db)
-	leaderElectionWorker := qdb.NewLeaderElectionWorker(db)
-	clockWorker := NewClockWorker(db, 1*time.Second)
-	schemaValidator := qdb.NewSchemaValidator(db)
-	schemaValidator.AddEntity("SystemClock", "CurrentTimeFn")
+	storeWorker := workers.NewStore(s)
+	leadershipWorker := workers.NewLeadership(s)
+	clockWorker := NewClockWorker(s, 1*time.Second)
+	leadershipWorker.
+		GetEntityFieldValidator().
+		RegisterEntityFields("SystemClock", "CurrentTimeFn")
 
-	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.ValidationRequired))
-	dbWorker.Signals.Connected.Connect(qdb.Slot(schemaValidator.ValidationRequired))
-	leaderElectionWorker.AddAvailabilityCriteria(func() bool {
-		return dbWorker.IsConnected() && schemaValidator.IsValid()
-	})
+	storeWorker.Connected.Connect(leadershipWorker.OnStoreConnected)
+	storeWorker.Disconnected.Connect(leadershipWorker.OnStoreDisconnected)
 
-	dbWorker.Signals.Connected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseConnected))
-	dbWorker.Signals.Disconnected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseDisconnected))
+	leadershipWorker.BecameLeader().Connect(clockWorker.OnBecameLeader)
+	leadershipWorker.LosingLeadership().Connect(clockWorker.OnLostLeadership)
 
-	leaderElectionWorker.Signals.BecameLeader.Connect(qdb.Slot(clockWorker.OnBecameLeader))
-	leaderElectionWorker.Signals.LosingLeadership.Connect(qdb.Slot(clockWorker.OnLostLeadership))
-
-	// Create a new application configuration
-	config := qdb.ApplicationConfig{
-		Name: "clock",
-		Workers: []qdb.IWorker{
-			dbWorker,
-			leaderElectionWorker,
-			clockWorker,
-		},
-	}
-
-	// Create a new application
-	app := qdb.NewApplication(config)
-
-	// Execute the application
-	app.Execute()
+	a := app.NewApplication("clock")
+	a.AddWorker(storeWorker)
+	a.AddWorker(leadershipWorker)
+	a.AddWorker(clockWorker)
+	a.Execute()
 }

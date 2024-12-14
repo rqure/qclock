@@ -12,7 +12,7 @@ import (
 func getDatabaseAddress() string {
 	addr := os.Getenv("Q_ADDR")
 	if addr == "" {
-		addr = "webgateway:20000"
+		addr = "ws://localhost:20000/ws"
 	}
 
 	return addr

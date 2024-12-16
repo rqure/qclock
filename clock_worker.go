@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/rqure/qlib/pkg/app"
@@ -23,22 +24,22 @@ func NewClockWorker(store data.Store, updateFrequency time.Duration) *ClockWorke
 	}
 }
 
-func (w *ClockWorker) OnBecameLeader() {
+func (w *ClockWorker) OnBecameLeader(context.Context) {
 	w.isLeader = true
 }
 
-func (w *ClockWorker) OnLostLeadership() {
+func (w *ClockWorker) OnLostLeadership(context.Context) {
 	w.isLeader = false
 }
 
-func (w *ClockWorker) Init(h app.Handle) {
+func (w *ClockWorker) Init(context.Context, app.Handle) {
 }
 
-func (w *ClockWorker) Deinit() {
+func (w *ClockWorker) Deinit(context.Context) {
 	w.ticker.Stop()
 }
 
-func (w *ClockWorker) DoWork() {
+func (w *ClockWorker) DoWork(ctx context.Context) {
 	if !w.isLeader {
 		return
 	}
@@ -47,10 +48,10 @@ func (w *ClockWorker) DoWork() {
 	case <-w.ticker.C:
 		clocks := query.New(w.store).
 			ForType("SystemClock").
-			Execute()
+			Execute(ctx)
 
 		for _, clock := range clocks {
-			clock.GetField("CurrentTimeFn").WriteTimestamp(time.Now())
+			clock.GetField("CurrentTimeFn").WriteTimestamp(ctx, time.Now())
 		}
 	default:
 

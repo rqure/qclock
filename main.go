@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"github.com/rqure/qlib/pkg/app"
 	"github.com/rqure/qlib/pkg/app/workers"
@@ -25,7 +24,6 @@ func main() {
 
 	storeWorker := workers.NewStore(s)
 	leadershipWorker := workers.NewLeadership(s)
-	clockWorker := NewClockWorker(s, 1*time.Second)
 	scheduleWorker := NewScheduleWorker(s)
 
 	validator := leadershipWorker.GetEntityFieldValidator()
@@ -35,16 +33,12 @@ func main() {
 	storeWorker.Connected.Connect(leadershipWorker.OnStoreConnected)
 	storeWorker.Disconnected.Connect(leadershipWorker.OnStoreDisconnected)
 
-	leadershipWorker.BecameLeader().Connect(clockWorker.OnBecameLeader)
-	leadershipWorker.LosingLeadership().Connect(clockWorker.OnLostLeadership)
-
 	leadershipWorker.BecameLeader().Connect(scheduleWorker.OnBecameLeader)
 	leadershipWorker.LosingLeadership().Connect(scheduleWorker.OnLostLeadership)
 
 	a := app.NewApplication("clock")
 	a.AddWorker(storeWorker)
 	a.AddWorker(leadershipWorker)
-	// a.AddWorker(clockWorker)
 	a.AddWorker(scheduleWorker)
 	a.Execute()
 }

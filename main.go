@@ -12,7 +12,7 @@ import (
 func getStoreAddress() string {
 	addr := os.Getenv("Q_ADDR")
 	if addr == "" {
-		addr = "ws://webgateway:20000/ws"
+		addr = "ws://localhost:20000/ws"
 	}
 
 	return addr
@@ -30,7 +30,7 @@ func main() {
 
 	validator := leadershipWorker.GetEntityFieldValidator()
 	validator.RegisterEntityFields("SystemClock", "CurrentTimeFn")
-	validator.RegisterEntityFields("Schedule", "CronExpression", "Enabled", "LastRun", "ExecuteFn")
+	validator.RegisterEntityFields("Schedule", "CronExpression", "Loaded", "Enabled", "LastRun", "ExecuteFn")
 
 	storeWorker.Connected.Connect(leadershipWorker.OnStoreConnected)
 	storeWorker.Disconnected.Connect(leadershipWorker.OnStoreDisconnected)
@@ -44,7 +44,7 @@ func main() {
 	a := app.NewApplication("clock")
 	a.AddWorker(storeWorker)
 	a.AddWorker(leadershipWorker)
-	a.AddWorker(clockWorker)
+	// a.AddWorker(clockWorker)
 	a.AddWorker(scheduleWorker)
 	a.Execute()
 }

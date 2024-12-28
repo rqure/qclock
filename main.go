@@ -26,9 +26,11 @@ func main() {
 	storeWorker := workers.NewStore(s)
 	leadershipWorker := workers.NewLeadership(s)
 	clockWorker := NewClockWorker(s, 1*time.Second)
-	leadershipWorker.
-		GetEntityFieldValidator().
-		RegisterEntityFields("SystemClock", "CurrentTimeFn")
+	scheduleWorker := NewScheduleWorker(s)
+
+	validator := leadershipWorker.GetEntityFieldValidator()
+	validator.RegisterEntityFields("SystemClock", "CurrentTimeFn")
+	validator.RegisterEntityFields("Schedule", "CronExpression", "Enabled", "LastRun", "ExecuteFn")
 
 	storeWorker.Connected.Connect(leadershipWorker.OnStoreConnected)
 	storeWorker.Disconnected.Connect(leadershipWorker.OnStoreDisconnected)
@@ -36,9 +38,13 @@ func main() {
 	leadershipWorker.BecameLeader().Connect(clockWorker.OnBecameLeader)
 	leadershipWorker.LosingLeadership().Connect(clockWorker.OnLostLeadership)
 
+	leadershipWorker.BecameLeader().Connect(scheduleWorker.OnBecameLeader)
+	leadershipWorker.LosingLeadership().Connect(scheduleWorker.OnLostLeadership)
+
 	a := app.NewApplication("clock")
 	a.AddWorker(storeWorker)
 	a.AddWorker(leadershipWorker)
 	a.AddWorker(clockWorker)
+	a.AddWorker(scheduleWorker)
 	a.Execute()
 }

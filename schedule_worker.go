@@ -102,17 +102,20 @@ func (w *ScheduleWorker) loadSchedules(ctx context.Context) {
 	w.scheduler.Clear()
 
 	schedules := query.New(w.store).
-		ForType("Schedule").
+		Select("CronExpression").
+		From("Schedule").
 		Where("Enabled").Equals(true).
 		Execute(ctx)
 
 	for _, schedule := range schedules {
-		cronExpr := schedule.GetField("CronExpression").ReadString(ctx)
+		cronExpr := schedule.GetField("CronExpression").GetString()
 
 		_, err := w.scheduler.CronWithSeconds(cronExpr).Do(func() {
 			log.Info("Executing schedule: %s (%s)", schedule.GetName(), schedule.GetId())
-			schedule.GetField("ExecuteFn").WriteInt(ctx)
-			schedule.GetField("LastRun").WriteTimestamp(ctx, time.Now())
+			schedule.DoMulti(ctx, func(schedule data.EntityBinding) {
+				schedule.GetField("ExecuteFn").WriteInt(ctx)
+				schedule.GetField("LastRun").WriteTimestamp(ctx, time.Now())
+			})
 		})
 
 		if err != nil {
